@@ -1,0 +1,55 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  width: 100%;
+}
+
+body {
+  background-color: #f9fafb;
+  color: #171717;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+/* Masonry grid styles */
+.masonry-grid {
+  display: flex;
+  width: 100%;
+  margin: 0 -16px;
+  padding: 24px 0;
+}
+
+.masonry-grid-column {
+  padding-left: 16px;
+  padding-right: 16px;
+  background-clip: padding-box;
+}
+
+.masonry-grid-column > div {
+  margin-bottom: 24px;
+}
+
+/* Responsive masonry */
+@media (max-width: 768px) {
+  .masonry-grid {
+    margin: 0 -8px;
+  }
+
+  .masonry-grid-column {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+
+  .masonry-grid-column > div {
+    margin-bottom: 16px;
+  }
+}
