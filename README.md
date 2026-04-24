@@ -55,7 +55,7 @@ npm start
 
 ## 🌐 Acesso
 
-O projeto será executado em `http://localhost:3000`
+O projeto será executado em `http://10.25.2.131:3000`
 
 ### Contas de Teste:
 

@@ -1,26 +1,28 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { storageUtils } from '@/lib/storage';
 import { imageUtils } from '@/lib/imageUtils';
-import { Upload, X } from 'lucide-react';
+import { Upload, X, CheckCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useDropzone } from 'react-dropzone';
 import { Photo } from '@/types';
+import styles from './UploadComponent.module.css';
 
 export const UploadComponent: React.FC = () => {
   const { user } = useAuth();
   const router = useRouter();
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string>('');
   const [uploaderName, setUploaderName] = useState('');
+  const [uploaderEmail, setUploaderEmail] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const onDrop = useCallback(async (acceptedFiles: File[]) => {
+    const file = acceptedFiles[0];
     if (!file) return;
 
     setError('');
@@ -36,13 +38,11 @@ export const UploadComponent: React.FC = () => {
     }
 
     try {
-      // Convert HEIC if needed
       let processedBlob: Blob = file;
       if (file.type.includes('heic') || file.type.includes('heif')) {
         processedBlob = await imageUtils.convertHeicToJpeg(file);
       }
 
-      // Compress for preview
       const compressedBlob = await imageUtils.compressImage(processedBlob);
       const previewUrl = imageUtils.getBlobUrl(compressedBlob);
 
@@ -52,12 +52,28 @@ export const UploadComponent: React.FC = () => {
       console.error('Error processing file:', err);
       setError('Fout bij het verwerken van het bestand.');
     }
+  }, []);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: {
+      'image/*': ['.jpeg', '.jpg', '.png', '.gif', '.webp', '.heic', '.heif']
+    },
+    multiple: false,
+    maxSize: 50 * 1024 * 1024,
+  });
+
+  const removeFile = () => {
+    setSelectedFile(null);
+    setPreview('');
+    setError('');
   };
 
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!selectedFile || !uploaderName || !user) {
+    const finalEmail = user?.email || uploaderEmail;
+    if (!selectedFile || !uploaderName || !finalEmail) {
       setError('Vul alstublieft alle velden in.');
       return;
     }
@@ -66,7 +82,6 @@ export const UploadComponent: React.FC = () => {
     setError('');
 
     try {
-      // Upload file to server
       const formData = new FormData();
       formData.append('file', selectedFile);
 
@@ -87,9 +102,9 @@ export const UploadComponent: React.FC = () => {
         id: `photo-${Date.now()}`,
         filename: selectedFile.name,
         url: url,
-        status: 'approved',
+        status: 'pending',
         uploaderName: uploaderName,
-        uploaderEmail: user.email,
+        uploaderEmail: finalEmail,
         uploadedAt: Date.now(),
         likes: 0,
         likedBy: [],
@@ -98,129 +113,118 @@ export const UploadComponent: React.FC = () => {
       storageUtils.addPhoto(newPhoto);
 
       setSuccess(true);
-      setSelectedFile(null);
-      setPreview('');
-      setUploaderName('');
-      if (fileInputRef.current) fileInputRef.current.value = '';
-
       setTimeout(() => {
-        setSuccess(false);
         router.push('/');
       }, 2000);
     } catch (err) {
       console.error('Upload error:', err);
-      setError('Fout bij het uploaden van het bestand.');
+      setError('Fout bij het uploaden van de foto.');
+    } finally {
       setIsUploading(false);
     }
   };
 
-  const handleClear = () => {
-    setSelectedFile(null);
-    setPreview('');
-    setUploaderName('');
-    setError('');
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  };
+  if (success) {
+    return (
+      <div className={styles.successCard}>
+        <CheckCircle className="w-16 h-16 text-green-400 mx-auto mb-4" strokeWidth={1.5} />
+        <h3 className={styles.successTitle}>Foto geüpload!</h3>
+        <p className={styles.successText}>Uw foto wacht op goedkeuring door de beheerder.</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <form onSubmit={handleUpload} className="bg-white rounded-lg shadow-lg p-8">
-        <h1 className="text-3xl font-bold mb-6">Foto uploaden</h1>
-
-        {/* File Input */}
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Selecteer foto
-          </label>
-          <div
-            className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-blue-500 transition"
-            onClick={() => fileInputRef.current?.click()}
-          >
-            {preview ? (
-              <div className="relative">
-                <img
-                  src={preview}
-                  alt="Preview"
-                  className="max-h-96 mx-auto rounded-lg object-contain"
-                />
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleClear();
-                  }}
-                  className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white p-2 rounded-lg"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-            ) : (
-              <div>
-                <Upload size={48} className="mx-auto text-gray-400 mb-2" />
-                <p className="text-lg font-medium text-gray-700">
-                  Klik om foto te selecteren
-                </p>
-                <p className="text-sm text-gray-500 mt-1">
-                  of sleep een foto hier naar toe
-                </p>
-                <p className="text-xs text-gray-400 mt-2">
-                  Ondersteunde formaten: JPG, PNG, GIF, WebP, HEIC
-                </p>
-              </div>
-            )}
-          </div>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*,.heic,.heif"
-            onChange={handleFileSelect}
-            className="hidden"
-          />
+    <div className={styles.wrap}>
+      <form onSubmit={handleUpload} className={styles.form}>
+        <div
+          {...getRootProps()}
+          className={[
+            styles.dropzone,
+            isDragActive ? styles.dropzoneActive : styles.dropzoneIdle,
+          ].join(' ')}
+        >
+          <input {...getInputProps()} />
+          <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" strokeWidth={1.5} />
+          {isDragActive ? (
+            <p className="text-blue-300 font-semibold text-lg">Laat de foto hier los...</p>
+          ) : (
+            <div>
+              <p className={styles.dropTitle}>
+                Sleep een foto hierheen of klik om te selecteren
+              </p>
+              <p className={styles.dropHint}>
+                JPG, PNG, GIF, WebP of HEIC (max 50MB)
+              </p>
+            </div>
+          )}
         </div>
 
-        {/* Uploader Name */}
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Jouw naam
+        {preview && (
+          <div className={styles.previewCard}>
+            <div className={styles.previewHeader}>
+              <h4 className={styles.previewTitle}>Voorvertoning</h4>
+              <button
+                type="button"
+                onClick={removeFile}
+                className={styles.previewClose}
+              >
+                <X size={20} strokeWidth={1.5} />
+              </button>
+            </div>
+            <img
+              src={preview}
+              alt="Preview"
+              className={styles.previewImg}
+            />
+          </div>
+        )}
+
+        <div>
+          <label htmlFor="uploaderName" className={styles.label}>
+            Uw naam
           </label>
           <input
             type="text"
+            id="uploaderName"
             value={uploaderName}
             onChange={(e) => setUploaderName(e.target.value)}
-            placeholder="Vul je naam in"
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className={styles.input}
+            placeholder="Voer uw naam in"
+            required
           />
         </div>
 
-        {/* Error Message */}
+        {!user && (
+          <div>
+            <label htmlFor="uploaderEmail" className={styles.label}>
+              E-mailadres
+            </label>
+            <input
+              type="email"
+              id="uploaderEmail"
+              value={uploaderEmail}
+              onChange={(e) => setUploaderEmail(e.target.value)}
+              className={styles.input}
+              placeholder="jouw@email.nl"
+              required
+            />
+          </div>
+        )}
+
         {error && (
-          <div className="mb-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
-            {error}
+          <div className={styles.errorBox}>
+            <p className={styles.errorText}>{error}</p>
           </div>
         )}
 
-        {/* Success Message */}
-        {success && (
-          <div className="mb-6 p-4 bg-green-100 border border-green-400 text-green-700 rounded-lg">
-            Foto succesvol geüpload! U wordt teruggestuurd...
-          </div>
-        )}
-
-        {/* Buttons */}
-        <div className="flex gap-4">
+        <div className={styles.actions}>
           <button
             type="submit"
-            disabled={!selectedFile || !uploaderName || isUploading}
-            className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium py-2 px-4 rounded-lg transition"
+            disabled={!selectedFile || !uploaderName || (!user && !uploaderEmail) || isUploading}
+            className={styles.submitButton}
           >
-            {isUploading ? 'Bezig met uploaden...' : 'Uploaden'}
-          </button>
-          <button
-            type="button"
-            onClick={handleClear}
-            className="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 font-medium rounded-lg transition"
-          >
-            Wissen
+            {isUploading ? 'Uploaden...' : 'Foto uploaden'}
           </button>
         </div>
       </form>

@@ -1,0 +1,54 @@
+@reference "tailwindcss";
+
+.card {
+  @apply bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-2 transition-all duration-300 hover:shadow-2xl hover:scale-[1.02] cursor-pointer;
+}
+
+.media {
+  @apply relative rounded-[2.25rem] overflow-hidden;
+}
+
+.img {
+  @apply w-full h-auto object-cover transition-transform duration-500 group-hover:scale-[1.02];
+}
+
+.gradient {
+  @apply pointer-events-none absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-black/90 via-black/40 to-transparent;
+}
+
+.adminWrap {
+  @apply absolute top-3 right-3;
+}
+
+.adminButton {
+  @apply bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-full shadow-lg transition-all duration-200 hover:shadow-2xl w-fit;
+}
+
+.overlay {
+  @apply absolute bottom-0 left-0 right-0 p-5 space-y-3;
+}
+
+.uploader {
+  @apply text-sm text-white/80 font-medium truncate;
+}
+
+.likeButton {
+  @apply flex items-center gap-2 text-sm font-semibold px-6 py-2 rounded-full transition-all duration-200 w-fit;
+}
+
+.likeLiked {
+  @apply bg-red-600 text-white;
+}
+
+.likeUnliked {
+  @apply bg-white/15 text-white hover:bg-white/25 border border-white/10;
+}
+
+.animating {
+  @apply scale-110;
+}
+
+.heartAnimating {
+  @apply scale-125;
+}
+

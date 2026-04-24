@@ -1,0 +1,38 @@
+@reference "tailwindcss";
+
+.grid {
+  @apply grid grid-cols-2 gap-4;
+}
+
+@media (min-width: 768px) {
+  .grid {
+    @apply grid-cols-3;
+  }
+}
+
+@media (min-width: 1024px) {
+  .grid {
+    @apply grid-cols-4;
+  }
+}
+
+.item {
+  @apply min-w-0;
+}
+
+.loadingWrap {
+  @apply flex justify-center items-center py-12;
+}
+
+.spinner {
+  @apply animate-spin rounded-full h-12 w-12 border-b-2 border-blue-400;
+}
+
+.emptyWrap {
+  @apply text-center py-16;
+}
+
+.emptyText {
+  @apply text-gray-400 text-lg;
+}
+

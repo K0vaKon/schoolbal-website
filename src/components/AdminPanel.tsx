@@ -3,7 +3,8 @@
 import React, { useEffect, useState } from 'react';
 import { Photo } from '@/types';
 import { storageUtils } from '@/lib/storage';
-import { Check, X, RotateCcw, Trash2 } from 'lucide-react';
+import { Check, X, RotateCcw, Trash2, Clock, AlertTriangle } from 'lucide-react';
+import styles from './AdminPanel.module.css';
 
 interface AdminPanelProps {}
 
@@ -53,132 +54,132 @@ export const AdminPanel: React.FC<AdminPanelProps> = () => {
   };
 
   if (isLoading) {
-    return <div className="text-center py-12">Laden...</div>;
+    return (
+      <div className={styles.loadingWrap}>
+        <div className={styles.spinner}></div>
+      </div>
+    );
   }
 
   const photos = activeTab === 'pending' ? pendingPhotos : rejectedPhotos;
 
   return (
-    <div className="max-w-6xl mx-auto">
-      <h1 className="text-3xl font-bold mb-6">Beheer</h1>
-
-      {/* Tabs */}
-      <div className="flex gap-4 mb-6 border-b border-gray-200">
+    <div>
+      <div className={styles.tabs}>
         <button
           onClick={() => setActiveTab('pending')}
-          className={`px-4 py-2 font-medium transition border-b-2 ${
-            activeTab === 'pending'
-              ? 'border-blue-600 text-blue-600'
-              : 'border-transparent text-gray-600 hover:text-gray-800'
-          }`}
+          className={[
+            styles.tabButton,
+            activeTab === 'pending' ? styles.tabActiveBlue : styles.tabInactive,
+          ].join(' ')}
         >
-          Te beoordelen ({pendingPhotos.length})
+          <Clock size={18} strokeWidth={1.5} />
+          Wachten op goedkeuring ({pendingPhotos.length})
         </button>
         <button
           onClick={() => setActiveTab('rejected')}
-          className={`px-4 py-2 font-medium transition border-b-2 ${
-            activeTab === 'rejected'
-              ? 'border-blue-600 text-blue-600'
-              : 'border-transparent text-gray-600 hover:text-gray-800'
-          }`}
+          className={[
+            styles.tabButton,
+            activeTab === 'rejected' ? styles.tabActiveRed : styles.tabInactive,
+          ].join(' ')}
         >
+          <AlertTriangle size={18} strokeWidth={1.5} />
           Afgewezen ({rejectedPhotos.length})
         </button>
       </div>
 
-      {/* Photos Grid */}
       {photos.length === 0 ? (
-        <div className="text-center py-12 text-gray-500">
-          <p>
+        <div className={styles.empty}>
+          <div className={styles.emptyIcon}>
+            {activeTab === 'pending' ? <Clock size={48} strokeWidth={1.5} /> : <AlertTriangle size={48} strokeWidth={1.5} />}
+          </div>
+          <p className={styles.emptyText}>
             {activeTab === 'pending'
               ? 'Geen foto\'s te beoordelen'
               : 'Geen afgewezen foto\'s'}
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className={styles.list}>
           {photos.map((photo) => (
-            <div key={photo.id} className="bg-white rounded-lg shadow-lg overflow-hidden">
-              <div className="aspect-square bg-gray-100 overflow-hidden">
-                <img
-                  src={photo.url}
-                  alt={photo.filename}
-                  className="w-full h-full object-cover"
-                />
-              </div>
+            <div
+              key={photo.id}
+              className={styles.card}
+            >
+              <img
+                src={photo.url}
+                alt={photo.filename}
+                className={styles.img}
+              />
 
-              <div className="p-4">
-                <p className="text-sm text-gray-600 mb-1">
-                  <strong>Naam:</strong> {photo.uploaderName}
-                </p>
-                <p className="text-sm text-gray-600 mb-1">
-                  <strong>E-mail:</strong> {photo.uploaderEmail}
-                </p>
-                <p className="text-xs text-gray-400 mb-3">
-                  {new Date(photo.uploadedAt).toLocaleString('nl-NL')}
-                </p>
+              <div className={styles.cardBody}>
+                <div className={styles.row}>
+                  <p className={styles.uploader}>{photo.uploaderName}</p>
+                  <span
+                    className={[
+                      styles.status,
+                      activeTab === 'pending' ? styles.statusPending : styles.statusRejected,
+                    ].join(' ')}
+                  >
+                    {activeTab === 'pending' ? 'Wachten' : 'Afgewezen'}
+                  </span>
+                </div>
 
-                {activeTab === 'pending' ? (
-                  <div className="space-y-3">
-                    <div>
-                      <label className="text-xs font-medium text-gray-700 block mb-1">
-                        Reden voor afwijzing (optioneel)
-                      </label>
-                      <input
-                        type="text"
-                        value={rejectionReason[photo.id] || ''}
-                        onChange={(e) =>
-                          setRejectionReason((prev) => ({
-                            ...prev,
-                            [photo.id]: e.target.value,
-                          }))
-                        }
-                        placeholder="Reden..."
-                        className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div className="flex gap-2">
+                {activeTab === 'rejected' && photo.rejectionReason && (
+                  <p className={styles.rejection}>
+                    <span className="font-semibold">Reden:</span> {photo.rejectionReason}
+                  </p>
+                )}
+
+                {activeTab === 'pending' && (
+                  <div>
+                    <textarea
+                      placeholder="Reden voor afwijzing (optioneel)"
+                      value={rejectionReason[photo.id] || ''}
+                      onChange={(e) => setRejectionReason(prev => ({ ...prev, [photo.id]: e.target.value }))}
+                      className={styles.textarea}
+                      rows={2}
+                    />
+                  </div>
+                )}
+
+                <div className={styles.actions}>
+                  {activeTab === 'pending' ? (
+                    <>
                       <button
                         onClick={() => handleApprove(photo.id)}
-                        className="flex-1 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg transition font-medium"
+                        className={[styles.actionBtn, styles.approve].join(' ')}
                       >
-                        <Check size={18} />
+                        <Check size={16} strokeWidth={1.5} />
                         Goedkeuren
                       </button>
                       <button
                         onClick={() => handleReject(photo.id)}
-                        className="flex-1 flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white py-2 rounded-lg transition font-medium"
+                        className={[styles.actionBtn, styles.reject].join(' ')}
                       >
-                        <X size={18} />
-                        Afwijzen
+                        <X size={16} strokeWidth={1.5} />
+                        Verwijderen
                       </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {photo.rejectionReason && (
-                      <div className="p-2 bg-red-100 text-red-700 text-sm rounded">
-                        <strong>Reden:</strong> {photo.rejectionReason}
-                      </div>
-                    )}
-                    <div className="flex gap-2">
+                    </>
+                  ) : (
+                    <>
                       <button
                         onClick={() => handleRestore(photo.id)}
-                        className="flex-1 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg transition font-medium"
+                        className={[styles.actionBtn, styles.restore].join(' ')}
                       >
-                        <RotateCcw size={18} />
+                        <RotateCcw size={16} strokeWidth={1.5} />
                         Herstellen
                       </button>
                       <button
                         onClick={() => handlePermanentDelete(photo.id)}
-                        className="flex-1 flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white py-2 rounded-lg transition font-medium"
+                        className={[styles.actionBtn, styles.deleteForever].join(' ')}
                       >
-                        <Trash2 size={18} />
-                        Verwijderen
+                        <Trash2 size={16} strokeWidth={1.5} />
+                        Definitief
                       </button>
-                    </div>
-                  </div>
-                )}
+                    </>
+                  )}
+                </div>
               </div>
             </div>
           ))}

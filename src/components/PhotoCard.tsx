@@ -5,6 +5,7 @@ import { Photo } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { Heart, Trash2 } from 'lucide-react';
 import { storageUtils } from '@/lib/storage';
+import styles from './PhotoCard.module.css';
 
 interface PhotoCardProps {
   photo: Photo;
@@ -24,14 +25,18 @@ export const PhotoCard: React.FC<PhotoCardProps> = ({
     user ? photo.likedBy.includes(user.id) : false
   );
   const [likes, setLikes] = useState(photo.likes);
+  const [isAnimating, setIsAnimating] = useState(false);
 
   const handleLike = () => {
     if (!user) return;
 
+    setIsAnimating(true);
     storageUtils.toggleLike(photo.id, user.id);
     setIsLiked(!isLiked);
     setLikes(isLiked ? likes - 1 : likes + 1);
     onLikeChange?.();
+
+    setTimeout(() => setIsAnimating(false), 300);
   };
 
   const handleDelete = () => {
@@ -42,40 +47,52 @@ export const PhotoCard: React.FC<PhotoCardProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-lg transition group">
-      <div className="relative w-full aspect-square bg-gray-100 overflow-hidden">
-        <img
-          src={photo.url}
-          alt={photo.filename}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-        />
+    <div className="group">
+      <div className={styles.card}>
+        <div className={styles.media}>
+          <img
+            src={photo.url}
+            alt={photo.filename}
+            className={styles.img}
+          />
 
-        {showAdminActions && (
-          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          {/* Soft bottom gradient for readability */}
+          <div className={styles.gradient} />
+
+          {/* Admin delete button */}
+          {showAdminActions && (
+            <div className={styles.adminWrap}>
+              <button
+                onClick={handleDelete}
+                className={styles.adminButton}
+                title="Verwijderen"
+              >
+                <Trash2 size={18} strokeWidth={1.5} />
+              </button>
+            </div>
+          )}
+
+          {/* Info overlay */}
+          <div className={styles.overlay}>
+            <p className={styles.uploader}>{photo.uploaderName}</p>
             <button
-              onClick={handleDelete}
-              className="bg-red-500 hover:bg-red-600 text-white p-2 rounded-lg shadow-lg transition"
-              title="Verwijderen"
+              onClick={handleLike}
+              className={[
+                styles.likeButton,
+                isLiked ? styles.likeLiked : styles.likeUnliked,
+                isAnimating ? styles.animating : '',
+              ].join(' ')}
             >
-              <Trash2 size={18} />
+              <Heart
+                size={16}
+                fill={isLiked ? 'currentColor' : 'none'}
+                strokeWidth={1.5}
+                className={`transition-all duration-200 ${isAnimating ? styles.heartAnimating : ''}`}
+              />
+              <span>{likes}</span>
             </button>
           </div>
-        )}
-      </div>
-
-      <div className="p-3">
-        <p className="text-xs text-gray-500 mb-1 truncate">{photo.uploaderName}</p>
-        <button
-          onClick={handleLike}
-          className={`flex items-center gap-1 text-sm font-medium transition ${
-            isLiked
-              ? 'text-red-500 hover:text-red-600'
-              : 'text-gray-600 hover:text-red-500'
-          }`}
-        >
-          <Heart size={16} fill={isLiked ? 'currentColor' : 'none'} />
-          <span>{likes}</span>
-        </button>
+        </div>
       </div>
     </div>
   );

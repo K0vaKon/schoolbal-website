@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import Masonry from 'react-masonry-css';
+import { motion } from 'framer-motion';
 import { Photo } from '@/types';
 import { PhotoCard } from './PhotoCard';
 import { storageUtils } from '@/lib/storage';
 import { useAuth } from '@/contexts/AuthContext';
+import styles from './Gallery.module.css';
 
 interface GalleryProps {
   showAdminActions?: boolean;
@@ -31,42 +32,61 @@ export const Gallery: React.FC<GalleryProps> = ({ showAdminActions = false }) =>
     setPhotos(approvedPhotos.sort((a, b) => b.uploadedAt - a.uploadedAt));
   };
 
-  const breakpointColumns = {
-    default: 4,
-    1536: 4,
-    1280: 3,
-    1024: 3,
-    768: 2,
-    640: 1,
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1,
+      },
+    },
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0 }
   };
 
   if (isLoading) {
-    return <div className="text-center py-12">Laden...</div>;
+    return (
+      <div className={styles.loadingWrap}>
+        <div className={styles.spinner}></div>
+      </div>
+    );
   }
 
   if (photos.length === 0) {
     return (
-      <div className="text-center py-12 text-gray-500">
-        <p>Geen foto's beschikbaar</p>
+      <div className={styles.emptyWrap}>
+        <p className={styles.emptyText}>Geen foto's beschikbaar</p>
       </div>
     );
   }
 
   return (
-    <Masonry
-      breakpointCols={breakpointColumns}
-      className="masonry-grid"
-      columnClassName="masonry-grid-column"
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className={styles.grid}
     >
-      {photos.map((photo) => (
-        <PhotoCard
+      {photos.map((photo, index) => (
+        <motion.div
           key={photo.id}
-          photo={photo}
-          onLikeChange={handlePhotoChange}
-          onDelete={handlePhotoChange}
-          showAdminActions={showAdminActions && isAdmin}
-        />
+          variants={itemVariants}
+          initial="hidden"
+          animate="visible"
+          transition={{ delay: index * 0.05, duration: 0.5 }}
+          className={styles.item}
+        >
+          <PhotoCard
+            photo={photo}
+            onLikeChange={handlePhotoChange}
+            onDelete={handlePhotoChange}
+            showAdminActions={showAdminActions && isAdmin}
+          />
+        </motion.div>
       ))}
-    </Masonry>
+    </motion.div>
   );
 };
