@@ -107,19 +107,9 @@ export const storageUtils = {
 export const initializeStorage = (): void => {
   if (typeof window === 'undefined') return;
 
+  // Initialize empty photos array on first app load
   if (!localStorage.getItem(STORAGE_KEYS.PHOTOS)) {
     localStorage.setItem(STORAGE_KEYS.PHOTOS, JSON.stringify([]));
-  } else {
-    // Migration: approve all existing pending photos on first app load
-    const photos = storageUtils.getPhotos();
-    const hasChanged = photos.some((p) => p.status === 'pending');
-    
-    if (hasChanged) {
-      const updatedPhotos = photos.map((p) => ({
-        ...p,
-        status: p.status === 'pending' ? 'approved' : p.status,
-      }));
-      storageUtils.savePhotos(updatedPhotos);
-    }
   }
+  // Do NOT approve pending photos automatically - they must be approved by admin
 };

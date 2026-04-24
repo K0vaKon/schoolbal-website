@@ -113,8 +113,11 @@ export const UploadComponent: React.FC = () => {
       storageUtils.addPhoto(newPhoto);
 
       setSuccess(true);
+      
+      // Refresh the page to show updated gallery
+      // Photo will only appear in gallery after admin approval
       setTimeout(() => {
-        router.push('/');
+        router.refresh();
       }, 2000);
     } catch (err) {
       console.error('Upload error:', err);

@@ -1,23 +1,25 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Нужно для работы dev-сервера при открытии не с localhost (LAN / IP).
-  // В Next 16 это опция верхнего уровня (НЕ experimental).
+  // Allow dev server to work with local network IP addresses and localhost
+  // In Next 16, allowedDevOrigins is a top-level option
   allowedDevOrigins: [
-    "http://10.25.2.131:3000",
-    "http://localhost:3000",
     "10.25.2.131",
-    "localhost:3000",
+    "localhost",
   ],
   typescript: {
-    // Next build иногда подвисает на встроенном typecheck в окружениях с Turbopack.
-    // TypeScript проверяется отдельно командой `npx tsc --noEmit`.
+    // Next build sometimes hangs on built-in typecheck with Turbopack
+    // TypeScript is checked separately with `npx tsc --noEmit`
     ignoreBuildErrors: true,
   },
   images: {
+    // Allow images to be served from local network IP
     remotePatterns: [
       {
         hostname: "10.25.2.131",
+      },
+      {
+        hostname: "localhost",
       },
     ],
   },
