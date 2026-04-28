@@ -1,39 +1,55 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
 
 /**
  * GET /api/photos
- * Returns only approved photos
+ * Returns photos based on filter
  * 
  * Query params:
  * - approved: boolean (default: true) - filter by approval status
+ * - status: pending|approved|rejected (returns only this status)
+ * - all: true - returns all photos (for admin panel)
  */
 export async function GET(request: NextRequest) {
   try {
-    // This endpoint is prepared for future database integration.
-    // Currently, photo filtering happens on the client side via localStorage
-    // because the data is stored in browser's localStorage.
-    //
-    // When integrating with a backend database, you would:
-    // 1. Query the database for photos
-    // 2. Filter by status === 'approved'
-    // 3. Return the filtered results
-    
     const { searchParams } = new URL(request.url);
-    const approvedOnly = searchParams.get('approved') !== 'false';
+    const status = searchParams.get('status');
+    const allPhotos = searchParams.get('all') === 'true';
+    const approvedOnly = searchParams.get('approved') !== 'false' && !allPhotos && !status;
     
-    // For now, return empty array as a placeholder
-    // The Gallery component will use localStorage directly on the client
-    const photos = [];
+    let photos;
     
-    // Example of what would happen with a real database:
-    // const dbPhotos = await db.photos.findMany({
-    //   where: approvedOnly ? { status: 'approved' } : {},
-    //   orderBy: { uploadedAt: 'desc' }
-    // });
+    if (allPhotos) {
+      // Return all photos (for admin panel)
+      photos = await prisma.photo.findMany({
+        orderBy: { uploadedAt: 'desc' }
+      });
+    } else if (status) {
+      // Return photos with specific status
+      photos = await prisma.photo.findMany({
+        where: { status: status },
+        orderBy: { uploadedAt: 'desc' }
+      });
+    } else if (approvedOnly) {
+      // Return only approved photos (for public gallery)
+      photos = await prisma.photo.findMany({
+        where: { status: 'approved' },
+        orderBy: { uploadedAt: 'desc' }
+      });
+    } else {
+      photos = [];
+    }
+    
+    // Convert BigInt to number for JSON serialization
+    const serializedPhotos = photos.map(photo => ({
+      ...photo,
+      uploadedAt: Number(photo.uploadedAt),
+      likedBy: photo.likedBy ? photo.likedBy.split(',').filter(Boolean) : []
+    }));
     
     return NextResponse.json({
-      photos: photos,
-      total: photos.length,
+      photos: serializedPhotos,
+      total: serializedPhotos.length,
       approvedOnly: approvedOnly
     });
   } catch (error) {

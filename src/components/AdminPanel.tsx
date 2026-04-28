@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from 'react';
 import { Photo } from '@/types';
-import { storageUtils } from '@/lib/storage';
 import { Check, X, RotateCcw, Trash2, Clock, AlertTriangle } from 'lucide-react';
 import styles from './AdminPanel.module.css';
 
@@ -19,37 +18,95 @@ export const AdminPanel: React.FC<AdminPanelProps> = () => {
     loadPhotos();
   }, []);
 
-  const loadPhotos = () => {
-    setPendingPhotos(storageUtils.getPendingPhotos());
-    setRejectedPhotos(storageUtils.getRejectedPhotos());
-    setIsLoading(false);
+  const loadPhotos = async () => {
+    try {
+      setIsLoading(true);
+      const [pendingRes, rejectedRes] = await Promise.all([
+        fetch('/api/photos?status=pending'),
+        fetch('/api/photos?status=rejected')
+      ]);
+      
+      const pendingData = await pendingRes.json();
+      const rejectedData = await rejectedRes.json();
+      
+      setPendingPhotos(pendingData.photos.sort((a: Photo, b: Photo) => b.uploadedAt - a.uploadedAt));
+      setRejectedPhotos(rejectedData.photos.sort((a: Photo, b: Photo) => b.uploadedAt - a.uploadedAt));
+    } catch (error) {
+      console.error('Error loading photos:', error);
+      setPendingPhotos([]);
+      setRejectedPhotos([]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleApprove = (id: string) => {
-    storageUtils.approvePhoto(id);
-    loadPhotos();
+  const handleApprove = async (id: string) => {
+    try {
+      const response = await fetch(`/api/photos/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'approved' })
+      });
+      
+      if (response.ok) {
+        loadPhotos();
+      }
+    } catch (error) {
+      console.error('Error approving photo:', error);
+    }
   };
 
-  const handleReject = (id: string) => {
-    const reason = rejectionReason[id] || 'Geen reden gegeven';
-    storageUtils.rejectPhoto(id, reason);
-    setRejectionReason((prev) => {
-      const newReason = { ...prev };
-      delete newReason[id];
-      return newReason;
-    });
-    loadPhotos();
+  const handleReject = async (id: string) => {
+    try {
+      const reason = rejectionReason[id] || 'Geen reden gegeven';
+      const response = await fetch(`/api/photos/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'rejected', rejectionReason: reason })
+      });
+      
+      if (response.ok) {
+        setRejectionReason((prev) => {
+          const newReason = { ...prev };
+          delete newReason[id];
+          return newReason;
+        });
+        loadPhotos();
+      }
+    } catch (error) {
+      console.error('Error rejecting photo:', error);
+    }
   };
 
-  const handleRestore = (id: string) => {
-    storageUtils.updatePhoto(id, { status: 'pending' });
-    loadPhotos();
+  const handleRestore = async (id: string) => {
+    try {
+      const response = await fetch(`/api/photos/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'pending' })
+      });
+      
+      if (response.ok) {
+        loadPhotos();
+      }
+    } catch (error) {
+      console.error('Error restoring photo:', error);
+    }
   };
 
-  const handlePermanentDelete = (id: string) => {
+  const handlePermanentDelete = async (id: string) => {
     if (window.confirm('Weet u zeker dat u deze foto permanent wilt verwijderen?')) {
-      storageUtils.deletePhoto(id);
-      loadPhotos();
+      try {
+        const response = await fetch(`/api/photos/${id}`, {
+          method: 'DELETE'
+        });
+        
+        if (response.ok) {
+          loadPhotos();
+        }
+      } catch (error) {
+        console.error('Error deleting photo:', error);
+      }
     }
   };
 

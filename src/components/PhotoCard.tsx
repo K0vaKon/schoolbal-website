@@ -4,7 +4,6 @@ import React, { useState } from 'react';
 import { Photo } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { Heart, Trash2 } from 'lucide-react';
-import { storageUtils } from '@/lib/storage';
 import styles from './PhotoCard.module.css';
 
 interface PhotoCardProps {
@@ -27,22 +26,50 @@ export const PhotoCard: React.FC<PhotoCardProps> = ({
   const [likes, setLikes] = useState(photo.likes);
   const [isAnimating, setIsAnimating] = useState(false);
 
-  const handleLike = () => {
+  const handleLike = async () => {
     if (!user) return;
 
     setIsAnimating(true);
-    storageUtils.toggleLike(photo.id, user.id);
-    setIsLiked(!isLiked);
-    setLikes(isLiked ? likes - 1 : likes + 1);
-    onLikeChange?.();
+    
+    try {
+      const newLikedBy = isLiked
+        ? photo.likedBy.filter(id => id !== user.id)
+        : [...photo.likedBy, user.id];
+      
+      const response = await fetch(`/api/photos/${photo.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          likedBy: newLikedBy.join(','),
+          likes: newLikedBy.length
+        })
+      });
+      
+      if (response.ok) {
+        setIsLiked(!isLiked);
+        setLikes(isLiked ? likes - 1 : likes + 1);
+        onLikeChange?.();
+      }
+    } catch (error) {
+      console.error('Error updating like:', error);
+    }
 
     setTimeout(() => setIsAnimating(false), 300);
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (window.confirm('Bent u zeker dat u deze foto wilt verwijderen?')) {
-      storageUtils.deletePhoto(photo.id);
-      onDelete?.();
+      try {
+        const response = await fetch(`/api/photos/${photo.id}`, {
+          method: 'DELETE'
+        });
+        
+        if (response.ok) {
+          onDelete?.();
+        }
+      } catch (error) {
+        console.error('Error deleting photo:', error);
+      }
     }
   };
 

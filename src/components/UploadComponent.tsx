@@ -2,7 +2,6 @@
 
 import React, { useState, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { storageUtils } from '@/lib/storage';
 import { imageUtils } from '@/lib/imageUtils';
 import { Upload, X, CheckCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -84,6 +83,8 @@ export const UploadComponent: React.FC = () => {
     try {
       const formData = new FormData();
       formData.append('file', selectedFile);
+      formData.append('uploaderName', uploaderName);
+      formData.append('uploaderEmail', finalEmail);
 
       const response = await fetch('/api/upload', {
         method: 'POST',
@@ -96,25 +97,9 @@ export const UploadComponent: React.FC = () => {
         throw new Error(result.error || result.details || 'Upload failed');
       }
 
-      const { url } = result;
-
-      const newPhoto: Photo = {
-        id: `photo-${Date.now()}`,
-        filename: selectedFile.name,
-        url: url,
-        status: 'pending',
-        uploaderName: uploaderName,
-        uploaderEmail: finalEmail,
-        uploadedAt: Date.now(),
-        likes: 0,
-        likedBy: [],
-      };
-
-      storageUtils.addPhoto(newPhoto);
-
       setSuccess(true);
       
-      // Refresh the page to show updated gallery
+      // Refresh the page to show updated gallery (for admin) or clear form
       // Photo will only appear in gallery after admin approval
       setTimeout(() => {
         router.refresh();

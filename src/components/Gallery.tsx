@@ -4,7 +4,6 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Photo } from '@/types';
 import { PhotoCard } from './PhotoCard';
-import { storageUtils } from '@/lib/storage';
 import { useAuth } from '@/contexts/AuthContext';
 import styles from './Gallery.module.css';
 
@@ -18,18 +17,24 @@ export const Gallery: React.FC<GalleryProps> = ({ showAdminActions = false }) =>
   const { isAdmin } = useAuth();
 
   useEffect(() => {
-    const loadPhotos = () => {
-      const approvedPhotos = storageUtils.getApprovedPhotos();
-      setPhotos(approvedPhotos.sort((a, b) => b.uploadedAt - a.uploadedAt));
-      setIsLoading(false);
-    };
-
     loadPhotos();
   }, []);
 
+  const loadPhotos = async () => {
+    try {
+      const response = await fetch('/api/photos?approved=true');
+      const data = await response.json();
+      setPhotos(data.photos.sort((a, b) => b.uploadedAt - a.uploadedAt));
+    } catch (error) {
+      console.error('Error loading photos:', error);
+      setPhotos([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handlePhotoChange = () => {
-    const approvedPhotos = storageUtils.getApprovedPhotos();
-    setPhotos(approvedPhotos.sort((a, b) => b.uploadedAt - a.uploadedAt));
+    loadPhotos();
   };
 
   const containerVariants = {
